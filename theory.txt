@@ -1,0 +1,4 @@
+git bach
+$ cd /c/Users/Ефимов/python-django-orm-blog
+make setup
+make test
