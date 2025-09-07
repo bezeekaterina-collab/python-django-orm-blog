@@ -1,4 +1,81 @@
-git bach
+git bash
 $ cd /c/Users/Ефимов/python-django-orm-blog
 make setup
+
+$ make setup
+rm: cannot remove 'db.sqlite3': No such file or directory
+Using CPython 3.13.3
+Creating virtual environment at: .venv
+Resolved 28 packages in 81ms
+Prepared 21 packages in 34.84s
+Installed 25 packages in 8.33s
+ + asgiref==3.8.1
+ + asttokens==3.0.0
+ + colorama==0.4.6
+ + decorator==5.1.1
+ + django==5.1.4
+ + django-extensions==3.2.3
+ + executing==2.1.0
+ + iniconfig==2.0.0
+ + ipython==8.31.0
+ + jedi==0.19.2
+ + matplotlib-inline==0.1.7
+ + packaging==24.2
+ + parso==0.8.4
+ + pluggy==1.5.0
+ + prompt-toolkit==3.0.48
+ + pure-eval==0.2.3
+ + pygments==2.19.1
+ + pytest==8.3.4
+ + pytest-django==4.9.0
+ + ruff==0.9.1
+ + sqlparse==0.5.3
+ + stack-data==0.6.3
+ + traitlets==5.14.3
+ + tzdata==2024.2
+ + wcwidth==0.2.13
+Operations to perform:
+  Apply all migrations: blog
+Running migrations:
+  Applying blog.0001_initial... OK
+
+
 make test
+
+$ make test
+uv run pytest
+============================= test session starts =============================
+platform win32 -- Python 3.13.3, pytest-8.3.4, pluggy-1.5.0
+django: version: 5.1.4, settings: python_django_orm_blog.settings (from ini)
+rootdir: C:\Users\Ефимов\python-django-orm-blog
+configfile: pyproject.toml
+plugins: django-4.9.0
+collected 1 item
+
+python_django_orm_blog\blog\tests.py .                                   [100%]
+
+============================== 1 passed in 0.68s ==============================
+
+Ефимов@DESKTOP-06VQ37M MINGW64 ~/python-django-orm-blog (main)
+$
+
+
+make shell
+
+$ make shell
+# Shell Plus Model Imports
+from python_django_orm_blog.blog.models import Post, PostComment, PostLike, Tag, User
+# Shell Plus Django Imports
+from django.core.cache import cache
+from django.conf import settings
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Avg, Case, Count, F, Max, Min, Prefetch, Q, Sum, When
+from django.utils import timezone
+from django.urls import reverse
+from django.db.models import Exists, OuterRef, Subquery
+Python 3.13.3 (main, Apr  9 2025, 04:04:49) [MSC v.1943 64 bit (AMD64)]
+Type 'copyright', 'credits' or 'license' for more information
+IPython 8.31.0 -- An enhanced Interactive Python. Type '?' for help.
+
+In [1]:
