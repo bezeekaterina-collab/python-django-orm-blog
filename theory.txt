@@ -226,3 +226,11 @@ SELECT "blog_post"."id",
 
 Execution time: 0.000935s [Database: default]
 3 Intro
+
+some_user.post_set.delete()
+
+OneToOneField - связь один к одному 
+
+модель Person
+parent = models.ForeignKey('self', ...) 
+                           'app_name.ModelName'
