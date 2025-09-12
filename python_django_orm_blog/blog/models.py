@@ -41,6 +41,8 @@ class Post(TimestampedModel):
     title = models.CharField(max_length=200)
     body = models.TextField()
     creator = models.ForeignKey(User, on_delete=models.CASCADE)
+    #creator = models.ForeignKey(User, on_delete=models.CASCADE, related_name='posts')
+    #user.posts.all()
     tags = models.ManyToManyField(Tag)
 
 

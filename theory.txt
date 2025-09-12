@@ -79,3 +79,68 @@ Type 'copyright', 'credits' or 'license' for more information
 IPython 8.31.0 -- An enhanced Interactive Python. Type '?' for help.
 
 In [1]:
+
+post = Post.objects.create(title="Первый пост", body="Тест поста", creator=user)
+
+post = Post.objects.first()
+author = post.creator
+print(author)
+
+user = User.objects.first()
+posts = user.post_set.all()
+
+post.creator = another_user
+post.save()
+
+user.delete()
+
+on_delete
+CASCADE - удаляются все связанные записи
+PROTECT - не даст удалить, если есть посты
+SET_NULL - устанавливает NULL во внешнем ключе (только для полей, допускающих null=True)
+SET_DEFAULT - устанавливает значение по умолчанию
+DO_NOTHING - ничего не делает
+
+select_related для связей один к одному и один ко многим. Делает SQL JOIN
+prefetch_related для связей один ко многим
+
+
+In [26]: user = User.objects.create(email="user@example.com", first_name="Ivan", last_name="Petrov", nickname="ivan_petrov")   
+INSERT INTO "blog_user" ("created_at", "updated_at", "nickname", "email", "first_name", "last_name")
+VALUES ('2025-09-12 13:31:03.552509', '2025-09-12 13:31:03.552632', 'ivan_petrov', 'user@example.com', 'Ivan', 'Petrov') RETURNING "blog_user"."id"
+
+Execution time: 0.011151s [Database: default]
+
+In [27]: post = Post.objects.create(title="Первый пост", body="Тест поста", creator=user)
+INSERT INTO "blog_post" ("created_at", "updated_at", "title", "body", "creator_id")
+VALUES ('2025-09-12 13:31:18.587149', '2025-09-12 13:31:18.587268', 'Первый пост', 'Тест поста', 5) RETURNING "blog_post"."id" 
+
+Execution time: 0.010314s [Database: default]
+
+In [28]: posts = Post.objects.select_related("creator").all()
+
+In [29]: for post in posts:
+    ...:     print(post.creator.nickname)
+    ...: 
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id",
+       "blog_user"."id",
+       "blog_user"."created_at",
+       "blog_user"."updated_at",
+       "blog_user"."nickname",
+       "blog_user"."email",
+       "blog_user"."first_name",
+       "blog_user"."last_name"
+  FROM "blog_post"
+ INNER JOIN "blog_user"
+    ON ("blog_post"."creator_id" = "blog_user"."id")
+
+Execution time: 0.001355s [Database: default]
+None
+ivan_petrov
+
+In [30]: 
