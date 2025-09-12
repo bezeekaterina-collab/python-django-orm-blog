@@ -143,4 +143,86 @@ Execution time: 0.001355s [Database: default]
 None
 ivan_petrov
 
-In [30]: 
+In [30]: Post.objects.create(title="Intro", body="Hi, my name is Bob!", creator=User.objects.create(
+    ...: email="bob@blogs.org",
+    ...: first_name="Bob",
+    ...: last_name="Smith",
+    ...: ),
+    ...: )
+INSERT INTO "blog_user" ("created_at", "updated_at", "nickname", "email", "first_name", "last_name")
+VALUES ('2025-09-12 13:38:12.607700', '2025-09-12 13:38:12.607855', NULL, 'bob@blogs.org', 'Bob', 'Smith') RETURNING "blog_user"."id"
+
+Execution time: 0.007025s [Database: default]
+INSERT INTO "blog_post" ("created_at", "updated_at", "title", "body", "creator_id")
+VALUES ('2025-09-12 13:38:12.658133', '2025-09-12 13:38:12.658247', 'Intro', 'Hi, my name is Bob!', 6) RETURNING "blog_post"."id"
+
+Execution time: 0.004837s [Database: default]
+Out[30]: <Post: Post object (3)>
+
+In [33]: post2 = Post.objects.create(
+    ...: title="Update",
+    ...: body="i'm tried...",
+    ...: creator_id=5,
+    ...: )
+INSERT INTO "blog_post" ("created_at", "updated_at", "title", "body", "creator_id")
+VALUES ('2025-09-12 13:42:44.081289', '2025-09-12 13:42:44.081386', 'Update', 'i''m tried...', 5) RETURNING "blog_post"."id"   
+
+Execution time: 0.005104s [Database: default]
+
+In [45]: post = Post.objects.get(id=3)
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ WHERE "blog_post"."id" = 3
+ LIMIT 21
+
+Execution time: 0.001008s [Database: default]
+
+In [46]: print(post.creator.email)
+SELECT "blog_user"."id",
+       "blog_user"."created_at",
+       "blog_user"."updated_at",
+       "blog_user"."nickname",
+       "blog_user"."email",
+       "blog_user"."first_name",
+       "blog_user"."last_name"
+  FROM "blog_user"
+ WHERE "blog_user"."id" = 6
+ LIMIT 21
+
+Execution time: 0.001253s [Database: default]
+bob@blogs.org
+
+
+In [57]: bob = User.objects.get(first_name="Bob")
+SELECT "blog_user"."id",
+       "blog_user"."created_at",
+       "blog_user"."updated_at",
+       "blog_user"."nickname",
+       "blog_user"."email",
+       "blog_user"."first_name",
+       "blog_user"."last_name"
+  FROM "blog_user"
+ WHERE "blog_user"."first_name" = 'Bob'
+ LIMIT 21
+
+Execution time: 0.001336s [Database: default]
+
+In [58]: for post in bob.post_set.all():
+    ...:     print(post.id, post.title)
+    ...: 
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ WHERE "blog_post"."creator_id" = 6
+
+Execution time: 0.000935s [Database: default]
+3 Intro
