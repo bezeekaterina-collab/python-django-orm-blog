@@ -234,3 +234,92 @@ OneToOneField - связь один к одному
 модель Person
 parent = models.ForeignKey('self', ...) 
                            'app_name.ModelName'
+
+ManyToManyField
+In [60]: intro = Tag.objects.create(title="intro")
+INSERT INTO "blog_tag" ("created_at", "updated_at", "title")
+VALUES ('2025-09-12 14:51:19.909468', '2025-09-12 14:51:19.911668', 'intro') RETURNING "blog_tag"."id"
+
+Execution time: 0.011234s [Database: default]
+
+In [61]: Post.objects.get(title="Intro").tags.add(intro)
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ WHERE "blog_post"."title" = 'Intro'
+ LIMIT 21
+
+Execution time: 0.001366s [Database: default]
+BEGIN
+
+Execution time: 0.000709s [Database: default]
+INSERT
+    OR
+IGNORE INTO "blog_post_tags" ("post_id", "tag_id")
+VALUES (3, 1)
+
+Execution time: 0.008948s [Database: default]
+
+In [62]:
+ManyRelatedManager 
+
+post = Post.objects.get(title="Intro")
+post.tags.remove(intro)
+
+In [63]: Post.objects.filter(tags__title="intro")
+Out[63]: SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ INNER JOIN "blog_post_tags"
+    ON ("blog_post"."id" = "blog_post_tags"."post_id")
+ INNER JOIN "blog_tag"
+    ON ("blog_post_tags"."tag_id" = "blog_tag"."id")
+ WHERE "blog_tag"."title" = 'intro'
+ LIMIT 21
+
+Execution time: 0.002930s [Database: default]
+<QuerySet [<Post: Post object (3)>]>
+
+In [65]: intro = Tag.objects.get(title="intro")
+SELECT "blog_tag"."id",
+       "blog_tag"."created_at",
+       "blog_tag"."updated_at",
+       "blog_tag"."title"
+  FROM "blog_tag"
+ WHERE "blog_tag"."title" = 'intro'
+ LIMIT 21
+
+Execution time: 0.001142s [Database: default]
+
+In [66]: for post in intro.post_set.all():
+    ...:     print(post.title)
+    ...: 
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ INNER JOIN "blog_post_tags"
+    ON ("blog_post"."id" = "blog_post_tags"."post_id")
+ WHERE "blog_post_tags"."tag_id" = 1
+
+Execution time: 0.001215s [Database: default]
+Intro
+
+In [67]: 
+
+add
+remove
+clear
+
+through 
