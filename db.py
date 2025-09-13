@@ -9,19 +9,26 @@ import sys
 import requests
 import psycopg2
 import psycopg2.extras
+from dotenv import load_dotenv
+
+# Загружаем переменные из .env
+load_dotenv()
+
+import os
 
 # ---------- ПАРАМЕТРЫ (ваши / тестовые) ----------
-PG_HOST = "localhost"
-PG_PORT = 5432
-PG_USER = "postgres"
-PG_PASSWORD = "admin"
-PG_DBNAME = "postgres"
+PG_HOST = os.getenv("PG_HOST", "localhost")
+PG_PORT = int(os.getenv("PG_PORT", 5432))
+PG_USER = os.getenv("PG_USER", "postgres")
+PG_PASSWORD = os.getenv("PG_PASSWORD", "")
+PG_DBNAME = os.getenv("PG_DBNAME", "postgres")
 
-YANDEX_LOGIN = "pznb@yandex.ru"
-YANDEX_TOKEN = ""
+YANDEX_LOGIN = os.getenv("YANDEX_LOGIN", "")
+YANDEX_TOKEN = os.getenv("YANDEX_TOKEN", "")
 
 REMOTE_DIR = "Backups/sql_results"
 # -------------------------------------------------
+
 
 def run_query_and_write_csv(conn_params, query, local_path, chunk_size=1000):
     """
