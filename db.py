@@ -26,39 +26,63 @@ REMOTE_DIR = "Backups/sql_results"
 def run_query_and_write_csv(conn_params, query, local_path, chunk_size=1000):
     """
     Выполнить SELECT-запрос и записать результат в CSV.
-    Если запрос не возвращает набор строк (cur.description is None), выдаёт понятную ошибку.
+    Сначала пробует client-side RealDictCursor; если description отсутствует,
+    переключается на server-side named cursor.
     """
     conn = psycopg2.connect(**conn_params)
-    # server-side cursor для экономии памяти
-    cur = conn.cursor(name="export_cursor", cursor_factory=psycopg2.extras.RealDictCursor)
+
     try:
-        cur.itersize = chunk_size
-        cur.execute(query)
-
-        # Если description is None — значит запрос не вернул набора колонок (не SELECT)
-        if cur.description is None:
-            # Закрываем курсор и бросаем ошибку с понятным сообщением
-            cur.close()
-            conn.close()
-            raise RuntimeError(
-                "Запрос не вернул результирующего набора столбцов (cur.description is None). "
-                "Убедитесь, что вы выполняете SELECT и что SQL корректен."
-            )
-
-        # Имена колонок
-        fieldnames = [desc.name for desc in cur.description]
-
-        with open(local_path, mode="w", newline="", encoding="utf-8") as csvfile:
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            for row in cur:
-                writer.writerow(row)
-    finally:
+        # 1) Попытка: обычный (client-side) RealDictCursor
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         try:
-            cur.close()
-        except Exception:
-            pass
+            cur.itersize = chunk_size
+            cur.execute(query)
+            if cur.description is not None:
+                fieldnames = [desc.name for desc in cur.description]
+                with open(local_path, mode="w", newline="", encoding="utf-8") as csvfile:
+                    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                    writer.writeheader()
+                    while True:
+                        rows = cur.fetchmany(chunk_size)
+                        if not rows:
+                            break
+                        for row in rows:
+                            writer.writerow(row)
+                return  # успешно записали, выходим
+            # если description is None — перейдём к fallback ниже
+        finally:
+            try:
+                cur.close()
+            except Exception:
+                pass
+
+        # 2) Fallback: server-side named cursor (streaming с сервера)
+        srv_cur = conn.cursor(name="export_cursor")
+        try:
+            srv_cur.itersize = chunk_size
+            srv_cur.execute(query)
+            if srv_cur.description is None:
+                # если и тут нет description — это явно не SELECT
+                raise RuntimeError(
+                    "Запрос не вернул описания колонок (cur.description is None) — "
+                    "возможно, это не SELECT или запрос некорректен."
+                )
+            fieldnames = [desc.name for desc in srv_cur.description]
+            with open(local_path, mode="w", newline="", encoding="utf-8") as csvfile:
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+                writer.writeheader()
+                for row in srv_cur:
+                    # server-side курсор возвращает кортежи, не dict — сопоставим с именами
+                    writer.writerow({fieldnames[i]: row[i] for i in range(len(fieldnames))})
+        finally:
+            try:
+                srv_cur.close()
+            except Exception:
+                pass
+
+    finally:
         conn.close()
+
 
 def mkcol_recursive(base_webdav, remote_dir, auth):
     parts = remote_dir.strip("/").split("/")
