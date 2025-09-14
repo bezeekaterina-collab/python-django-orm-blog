@@ -323,3 +323,213 @@ remove
 clear
 
 through 
+
+class Book(models.Model):
+    price = models.DecimalField(max_digits=10, decimal_places=2)
+    ...
+
+total_price = sum(book.price for book in Book.objects.all())
+
+.aggregate()
+
+from django.db.models import Avg, Max, Min, Sum, Count
+
+Book.objects.aggregate(Avg('price'))
+{'price__avg': 10.0}
+
+Book.objects.aggregate(average_price=Avg('price'))
+{'average_price': 10.0}
+
+Book.objects.aggregate(Avg('price'), Max('price'), Min('price'), Sum('price'), Count('price'))
+{'price__avg': 10.0, 'price__max': 100.0, 'price__min': 1.0, 'price__sum': 100.0, 'price__count': 10}
+
+
+In [5]: author = User.objects.get(id=5)
+SELECT "blog_user"."id",
+       "blog_user"."created_at",
+       "blog_user"."updated_at",
+       "blog_user"."nickname",
+       "blog_user"."email",
+       "blog_user"."first_name",
+       "blog_user"."last_name"
+  FROM "blog_user"
+ WHERE "blog_user"."id" = 5
+ LIMIT 21
+
+Execution time: 0.001027s [Database: default]
+
+In [6]: posts = [(p, p.postcomment_set.count()) for p in author.post_set.all()]
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id"
+  FROM "blog_post"
+ WHERE "blog_post"."creator_id" = 5
+
+Execution time: 0.007711s [Database: default]
+SELECT COUNT(*) AS "__count"
+  FROM "blog_postcomment"
+ WHERE "blog_postcomment"."post_id" = 2
+
+Execution time: 0.002384s [Database: default]
+SELECT COUNT(*) AS "__count"
+  FROM "blog_postcomment"
+ WHERE "blog_postcomment"."post_id" = 4
+
+Execution time: 0.000979s [Database: default]
+
+In [7]: posts
+Out[7]: [(<Post: Post object (2)>, 0), (<Post: Post object (4)>, 0)]
+
+In [8]: 
+
+.annotate()
+
+from django.db.models import Avg, Max, Min, Sum, Count
+
+posts = author.post_set.annotate(comment_count=Count('postcomment'))
+
+
+In [8]: posts = author.post_set.annotate(comment_count=Count('postcomment'))
+
+In [9]: for post in posts:
+   ...:     print(post.title, post.comment_count)
+   ...: 
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id",
+       COUNT("blog_postcomment"."id") AS "comment_count"
+  FROM "blog_post"
+  LEFT OUTER JOIN "blog_postcomment"
+    ON ("blog_post"."id" = "blog_postcomment"."post_id")
+ WHERE "blog_post"."creator_id" = 5
+ GROUP BY "blog_post"."id",
+          "blog_post"."created_at",
+          "blog_post"."updated_at",
+          "blog_post"."title",
+          "blog_post"."body",
+          "blog_post"."creator_id"
+
+Execution time: 0.001246s [Database: default]
+Первый пост 0
+Update 0
+
+In [10]: users = User.objects.annotate(post_count=Count('post'))
+
+In [11]: users = users.order_by("-post_count")
+
+In [14]: posts = Post.objects.annotate(Count("tags"))
+
+In [15]: print(posts[0].tags__count)
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id",
+       COUNT("blog_post_tags"."tag_id") AS "tags__count"
+  FROM "blog_post"
+  LEFT OUTER JOIN "blog_post_tags"
+    ON ("blog_post"."id" = "blog_post_tags"."post_id")
+ GROUP BY "blog_post"."id",
+          "blog_post"."created_at",
+          "blog_post"."updated_at",
+          "blog_post"."title",
+          "blog_post"."body",
+          "blog_post"."creator_id"
+ LIMIT 1
+
+Execution time: 0.001251s [Database: default]
+0
+
+In [16]: for post in posts:
+    ...:     print(post.tags__count)
+    ...: 
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id",
+       COUNT("blog_post_tags"."tag_id") AS "tags__count"
+  FROM "blog_post"
+  LEFT OUTER JOIN "blog_post_tags"
+    ON ("blog_post"."id" = "blog_post_tags"."post_id")
+ GROUP BY "blog_post"."id",
+          "blog_post"."created_at",
+          "blog_post"."updated_at",
+          "blog_post"."title",
+          "blog_post"."body",
+          "blog_post"."creator_id"
+
+Execution time: 0.001309s [Database: default]
+0
+0
+0
+1
+
+In [17]: 
+
+In [17]: posts = Post.objects.annotate(total_tags=Count("tags"))
+
+In [18]: print(posts[3].total_tags)
+SELECT "blog_post"."id",
+       "blog_post"."created_at",
+       "blog_post"."updated_at",
+       "blog_post"."title",
+       "blog_post"."body",
+       "blog_post"."creator_id",
+       COUNT("blog_post_tags"."tag_id") AS "total_tags"
+  FROM "blog_post"
+  LEFT OUTER JOIN "blog_post_tags"
+    ON ("blog_post"."id" = "blog_post_tags"."post_id")
+ GROUP BY "blog_post"."id",
+          "blog_post"."created_at",
+          "blog_post"."updated_at",
+          "blog_post"."title",
+          "blog_post"."body",
+          "blog_post"."creator_id"
+ LIMIT 1
+OFFSET 3
+
+Execution time: 0.001116s [Database: default]
+1
+
+In [19]: 
+
+в случае связи M:M .annotate(Sum("views"))
+post = Post.objects.create(
+    title="django orm",
+    body="i'm tried...",
+    views=100,
+)
+
+post.tags.add(tag1, tag2, tag3)
+
+wrong_query = Post.objects.annotate(total_views=Sum("views")).get(id=post.id)
+print(wrong_query.total_views)
+
+correct_query = Post.objects.annotate(
+    total_views=Sum("views", distinct=True)
+).get(id=post.id)
+
+print(correct_query.total_views)
+
+posts = Post.objects.annotate(comment_count=Count("postcomment"))
+for post in posts:
+    print(post.title, post.comment_count)
+
+authors = User.objects.annotate(post_count=Count("post"))
+for author in authors:
+    print(author.nickname, author.post_count)
+
+posts = Post.objects.annotate(avg_lenght=Avg("postcomment__body__length"))
+
+В учебном проекте создайте несколько постов и тегов
+Пометьте разные посты разным количеством тегов
+Постройте запрос, который будет возвращать "Top 3" тега по количеству помеченных ими постов.
