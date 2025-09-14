@@ -533,3 +533,190 @@ posts = Post.objects.annotate(avg_lenght=Avg("postcomment__body__length"))
 В учебном проекте создайте несколько постов и тегов
 Пометьте разные посты разным количеством тегов
 Постройте запрос, который будет возвращать "Top 3" тега по количеству помеченных ими постов.
+
+from django.db import transaction
+from django.core.exeprions import ValidationError
+
+def process_order(order_items):
+    with transaction.atomic():
+        order = Order.objects.create(total=0, status="pending")
+        total_price = 0
+
+        for item in order_items:
+            product = Product.objects.select_for_update().get(id=item["product_id"])
+
+            if product.stock < item["quantity"]:
+                raise ValidationError(f"недостаточно товара {product.name}")
+
+            product.stock -= item["quantity"]
+            product.save()
+
+            total_price += product.price * item["quantity"]
+        
+        order.total = total_price
+        order.status = "confirmed"
+        order.save()
+
+@transaction.atomic
+def viewfunc(request):
+    do_stuff()
+
+
+commit()
+rollback()
+
+from decimal import Decimal
+
+def process_payment(order, payment_amount):
+    with transaction.atomic():
+        order.refresh_from_db()
+
+        if order.status == "paid":
+            transaction.set_rollback(True)
+            return "Заказ уже оплачен"
+
+        if payment_status < order.total:
+            transaction.set_rollback(True)
+            return "Недостаточно средств"
+
+        if payment_amount > order.total:
+            refund_amount = payment_amount - order.total
+            Refund.objects.create(order=order, amount=refund_amount)
+
+        order.status = "paid"
+        order.save()
+
+        return "Оплата прошла успешно"
+
+
+READ COMITTED 
+SERIALIZABLE
+select_for_update()
+
+savepoint()
+savepoint_commit(sid)
+savepoint_rollback(sid)
+
+
+from django.db import models, transaction
+
+
+class Project(models.Model):
+    name = models.CharField(max_length=200)
+
+    @classmethod
+    def reorganize(cls, assignments):
+        # BEGIN (write your solution here)
+        
+        # END
+
+
+class Worker(models.Model):
+    name = models.CharField(max_length=200)
+    project = models.ForeignKey(
+        Project,
+        null=True,
+        on_delete=models.SET_NULL,
+    )
+
+models.py
+Проект моделирует систему управления занятостью работников (Worker) на проектах (Project). Каждый сотрудник в любой момент времени либо свободен (project=None), либо работает над конкретным проектом.
+
+Вам предстоит реализовать метод .reorganize() класса Project, который должен принимать в качестве аргумента словарь с новыми назначениями и применять оные к БД. Словарь с назначениями имеет id работников в роли ключей и id проектов в роли значений. Все работники, не упомянутые в словаре, должны быть освобождены от работы.
+
+Применение нового "графика" должно быть атомарным. Если в процессе изменения состояния БД произойдёт ошибка, все назначения должны быть сохранены в исходном состоянии.
+
+Все ошибки, возникающие в процессе работы .reorganize(), должны завершать работу функции, то есть перехватывать их не следует.
+
+# работать нужно именно с id сущностей
+time_machine = Project.objects.create(name='Time Machine').id
+marty = Worker.objects.create(name='Marty').id
+emmet = Worker.objects.create(name='Emmet').id
+Project.reorganize({
+    marty: time_machine,
+    emmet: time_machine,
+})
+
+Project.objects.filter(id=time_machine).first().worker_set.count()  # 2
+Project.reorganize({
+    emmet: 42  # несуществующий проект!
+})
+
+IntegrityError
+# состояние не изменилось:
+Project.objects.filter(id=time_machine).first().worker_set.count()  # 2
+
+
+Используйте django.db.transaction.atomic() для обеспечения атомарности.
+Метод update()
+
+
+import django.db
+import pytest
+
+from django_project.app import models
+
+
+def work_on(*args, project_id):
+    return all(
+        models.Worker.objects.get(id=worker_id).project_id == project_id
+        for worker_id in args
+    )
+
+
+@pytest.mark.django_db
+def test_project_reorganize():
+    alice, bob, john, tom = [
+        models.Worker.objects.create(name=name).id
+        for name in ("Alice", "Bob", "John", "Tom")
+    ]
+
+    site, wiki, crm = [
+        models.Project.objects.create(name=name).id for name in ("Site", "Wiki", "Crm")
+    ]
+
+    models.Project.reorganize(
+        {
+            alice: site,
+            bob: site,
+            john: wiki,
+            tom: crm,
+        }
+    )
+
+    assert work_on(alice, bob, project_id=site)
+    assert work_on(john, project_id=wiki)
+    assert work_on(tom, project_id=crm)
+
+    models.Project.reorganize(
+        {
+            alice: crm,
+            bob: crm,
+            john: crm,
+        }
+    )
+
+    assert work_on(alice, bob, john, project_id=crm)
+    assert work_on(tom, project_id=None)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_project_reorganize_on_bad_data():
+    time_machine = models.Project.objects.create(name="Time Machine").id
+    marty = models.Worker.objects.create(name="Marty").id
+    emmet = models.Worker.objects.create(
+        name="Emmet",
+        project_id=time_machine,
+    ).id
+
+    with pytest.raises(django.db.IntegrityError):
+        models.Project.reorganize(
+            {
+                marty: time_machine,
+                emmet: 42,  # несуществующий проект!
+            }
+        )
+
+    # исходные назначения не должны были измениться
+    assert work_on(emmet, project_id=time_machine)
+    assert work_on(marty, project_id=None)
